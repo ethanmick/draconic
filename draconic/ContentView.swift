@@ -41,24 +41,39 @@ struct ContentView: View {
                     .buttonStyle(.borderedProminent)
                     .foregroundColor(audioManager.isRecording ? .red : .blue)
                     
-                    if whisperManager.isTranscribing {
+                    if whisperManager.isTranscribing || whisperManager.isRealtimeTranscribing {
                         ProgressView("Transcribing...")
                             .progressViewStyle(CircularProgressViewStyle())
                     }
                     
-                    if !whisperManager.transcribedText.isEmpty {
+                    if !whisperManager.realtimeText.isEmpty {
                         VStack(alignment: .leading) {
-                            Text("Transcribed Text:")
+                            Text("Live Transcription:")
                                 .font(.headline)
-                            Text(whisperManager.transcribedText)
+                                .foregroundColor(.blue)
+                            Text(whisperManager.realtimeText)
                                 .textSelection(.enabled)
                                 .padding()
-                                .background(Color.gray.opacity(0.1))
+                                .background(Color.blue.opacity(0.1))
                                 .cornerRadius(8)
+                                .animation(.easeInOut(duration: 0.3), value: whisperManager.realtimeText)
                         }
                     }
                     
                     if !whisperManager.transcribedText.isEmpty {
+                        VStack(alignment: .leading) {
+                            Text("Final Transcription:")
+                                .font(.headline)
+                                .foregroundColor(.green)
+                            Text(whisperManager.transcribedText)
+                                .textSelection(.enabled)
+                                .padding()
+                                .background(Color.green.opacity(0.1))
+                                .cornerRadius(8)
+                        }
+                    }
+                    
+                    if !whisperManager.transcribedText.isEmpty || !whisperManager.realtimeText.isEmpty {
                         Button("Clear") {
                             whisperManager.clearText()
                         }
@@ -76,6 +91,12 @@ struct ContentView: View {
             audioManager.onAudioCaptured = { audioData in
                 Task {
                     await whisperManager.transcribe(audioData: audioData)
+                }
+            }
+            
+            audioManager.onStreamingAudioCaptured = { audioData in
+                Task {
+                    await whisperManager.transcribeRealtime(audioData: audioData)
                 }
             }
         }

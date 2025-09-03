@@ -34,6 +34,7 @@ Since this is an Xcode project, development should primarily be done through Xco
 - Open `draconic.xcodeproj` in Xcode
 - Use Cmd+R to build and run
 - Use Cmd+U to run tests
+- **IMPORTANT**: If code changes need testing, ask the user to build and run the app in Xcode (command line builds require full Xcode installation)
 
 ### Testing
 - Unit tests in `draconicTests/` use Swift Testing framework

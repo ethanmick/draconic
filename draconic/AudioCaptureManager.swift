@@ -14,9 +14,13 @@ class AudioCaptureManager: NSObject {
     private var audioEngine = AVAudioEngine()
     private var inputNode: AVAudioInputNode?
     private var audioBuffer = Data()
+    private var streamingBuffer = Data()
+    private var lastStreamTime = Date()
+    private let streamingInterval: TimeInterval = 2.0 // Stream every 2 seconds
     
     var isRecording = false
     var onAudioCaptured: ((Data) -> Void)?
+    var onStreamingAudioCaptured: ((Data) -> Void)?
     
     override init() {
         super.init()
@@ -43,6 +47,8 @@ class AudioCaptureManager: NSObject {
         guard !isRecording else { return }
         
         audioBuffer = Data()
+        streamingBuffer = Data()
+        lastStreamTime = Date()
         inputNode = audioEngine.inputNode
         
         let inputFormat = inputNode!.inputFormat(forBus: 0)
@@ -71,6 +77,20 @@ class AudioCaptureManager: NSObject {
                 
                 DispatchQueue.main.async {
                     self.audioBuffer.append(data)
+                    self.streamingBuffer.append(data)
+                    
+                    // Check if it's time to stream audio for realtime transcription
+                    let now = Date()
+                    if now.timeIntervalSince(self.lastStreamTime) >= self.streamingInterval && !self.streamingBuffer.isEmpty {
+                        let streamData = self.createWAVData(from: self.streamingBuffer)
+                        self.onStreamingAudioCaptured?(streamData)
+                        self.lastStreamTime = now
+                        // Keep last 0.5 seconds for context overlap
+                        let overlapSamples = Int(16000 * 0.5 * 2) // 0.5 seconds of 16kHz 16-bit mono
+                        if self.streamingBuffer.count > overlapSamples {
+                            self.streamingBuffer = Data(self.streamingBuffer.suffix(overlapSamples))
+                        }
+                    }
                 }
             }
         }
@@ -98,6 +118,7 @@ class AudioCaptureManager: NSObject {
         }
         
         audioBuffer = Data()
+        streamingBuffer = Data()
     }
     
     private func createWAVData(from pcmData: Data) -> Data {

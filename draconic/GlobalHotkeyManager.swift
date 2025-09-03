@@ -60,7 +60,6 @@ class GlobalHotkeyManager: ObservableObject {
 // Helper for FourCharCode
 private func fourCharCode(_ string: String) -> FourCharCode {
     let utf8 = string.utf8
-    let count = utf8.count
     var result: FourCharCode = 0
     for (i, byte) in utf8.enumerated() {
         if i >= 4 { break }

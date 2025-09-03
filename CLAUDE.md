@@ -46,3 +46,24 @@ Since this is an Xcode project, development should primarily be done through Xco
 - Uses modern Swift concurrency (`async throws` in tests)
 - Follows SwiftUI declarative patterns
 - Minimal initial setup - currently displays "Hello, world!" with globe icon
+
+## Platform-Specific Guidelines
+
+**CRITICAL: This is a macOS-only application. DO NOT use iOS-specific APIs.**
+
+### ❌ Avoid iOS-Only APIs:
+- `AVAudioSession` (iOS audio session management - not needed on macOS)
+- `UIKit` imports or components
+- iOS-specific permission patterns
+- `UIApplication` or `UIScene` APIs
+
+### ✅ Use macOS APIs:
+- `AVAudioEngine` directly (no session management needed)
+- `AVCaptureDevice.requestAccess(for: .audio)` for microphone permissions
+- `NSWindow`, `NSApplication` for native macOS features
+- `AppKit` when SwiftUI is insufficient
+
+### Audio Capture Notes:
+- Use `audioEngine.inputNode.inputFormat(forBus: 0)` for microphone input
+- No `AVAudioSession` configuration required on macOS
+- Direct access to `AVAudioEngine` without iOS constraints

@@ -28,15 +28,7 @@ class WhisperManager {
         isLoading = true
         
         do {
-            whisperKit = try await WhisperKit(
-                computeUnits: .cpuAndGPU,
-                audioProcessor: .melSpectrogram,
-                verbose: true,
-                logLevel: .debug,
-                prewarm: true,
-                load: true,
-                download: true
-            )
+            whisperKit = try await WhisperKit()
             print("WhisperKit initialized successfully")
         } catch {
             print("Failed to initialize WhisperKit: \(error)")
@@ -60,8 +52,8 @@ class WhisperManager {
             let results = try await whisperKit.transcribe(audioPath: tempURL.path)
             
             await MainActor.run {
-                if let text = results?.text, !text.isEmpty {
-                    self.transcribedText = text.trimmingCharacters(in: .whitespacesAndNewlines)
+                if let firstResult = results.first, !firstResult.text.isEmpty {
+                    self.transcribedText = firstResult.text.trimmingCharacters(in: .whitespacesAndNewlines)
                 }
             }
             

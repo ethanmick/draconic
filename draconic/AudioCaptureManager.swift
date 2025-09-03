@@ -20,23 +20,21 @@ class AudioCaptureManager: NSObject {
     
     override init() {
         super.init()
-        setupAudioSession()
-    }
-    
-    private func setupAudioSession() {
-        do {
-            let audioSession = AVAudioSession.sharedInstance()
-            try audioSession.setCategory(.record, mode: .measurement, options: .duckOthers)
-            try audioSession.setActive(true, options: .notifyOthersOnDeactivation)
-        } catch {
-            print("Failed to set up audio session: \(error)")
-        }
     }
     
     func requestMicrophonePermission() async -> Bool {
         await withCheckedContinuation { continuation in
-            AVAudioSession.sharedInstance().requestRecordPermission { granted in
-                continuation.resume(returning: granted)
+            switch AVCaptureDevice.authorizationStatus(for: .audio) {
+            case .authorized:
+                continuation.resume(returning: true)
+            case .notDetermined:
+                AVCaptureDevice.requestAccess(for: .audio) { granted in
+                    continuation.resume(returning: granted)
+                }
+            case .denied, .restricted:
+                continuation.resume(returning: false)
+            @unknown default:
+                continuation.resume(returning: false)
             }
         }
     }
@@ -47,7 +45,7 @@ class AudioCaptureManager: NSObject {
         audioBuffer = Data()
         inputNode = audioEngine.inputNode
         
-        let inputFormat = inputNode!.outputFormat(forBus: 0)
+        let inputFormat = inputNode!.inputFormat(forBus: 0)
         let recordingFormat = AVAudioFormat(commonFormat: .pcmFormatInt16, 
                                           sampleRate: 16000, 
                                           channels: 1, 
@@ -111,26 +109,32 @@ class AudioCaptureManager: NSObject {
         let byteRate = sampleRate * UInt32(channels) * UInt32(bitsPerSample) / 8
         let blockAlign = channels * bitsPerSample / 8
         let dataSize = UInt32(pcmData.count)
-        let fileSize = 36 + dataSize
+        var fileSize = (36 + dataSize).littleEndian
         
         wavData.append("RIFF".data(using: .ascii)!)
-        wavData.append(Data(bytes: &fileSize.littleEndian, count: 4))
+        wavData.append(Data(bytes: &fileSize, count: 4))
         wavData.append("WAVE".data(using: .ascii)!)
         wavData.append("fmt ".data(using: .ascii)!)
         
-        var fmtChunkSize: UInt32 = 16
-        wavData.append(Data(bytes: &fmtChunkSize.littleEndian, count: 4))
+        var fmtChunkSize = UInt32(16).littleEndian
+        wavData.append(Data(bytes: &fmtChunkSize, count: 4))
         
-        var audioFormat: UInt16 = 1
-        wavData.append(Data(bytes: &audioFormat.littleEndian, count: 2))
-        wavData.append(Data(bytes: &channels.littleEndian, count: 2))
-        wavData.append(Data(bytes: &sampleRate.littleEndian, count: 4))
-        wavData.append(Data(bytes: &byteRate.littleEndian, count: 4))
-        wavData.append(Data(bytes: &blockAlign.littleEndian, count: 2))
-        wavData.append(Data(bytes: &bitsPerSample.littleEndian, count: 2))
+        var audioFormat = UInt16(1).littleEndian
+        wavData.append(Data(bytes: &audioFormat, count: 2))
+        var channelsLE = channels.littleEndian
+        wavData.append(Data(bytes: &channelsLE, count: 2))
+        var sampleRateLE = sampleRate.littleEndian
+        wavData.append(Data(bytes: &sampleRateLE, count: 4))
+        var byteRateLE = byteRate.littleEndian
+        wavData.append(Data(bytes: &byteRateLE, count: 4))
+        var blockAlignLE = blockAlign.littleEndian
+        wavData.append(Data(bytes: &blockAlignLE, count: 2))
+        var bitsPerSampleLE = bitsPerSample.littleEndian
+        wavData.append(Data(bytes: &bitsPerSampleLE, count: 2))
         
         wavData.append("data".data(using: .ascii)!)
-        wavData.append(Data(bytes: &dataSize.littleEndian, count: 4))
+        var dataSizeLE = dataSize.littleEndian
+        wavData.append(Data(bytes: &dataSizeLE, count: 4))
         wavData.append(pcmData)
         
         return wavData

@@ -4,67 +4,105 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-This is a macOS SwiftUI application called "draconic" built with Xcode. The project uses the modern Swift Testing framework and targets macOS 15.4+.
+Draconic is a macOS dictation app with global hotkey activation and real-time transcription. The app uses WhisperKit for on-device speech recognition, provides a floating overlay window, and can insert transcribed text into any application.
 
-## Project Structure
+## Core Architecture
 
-- `draconic/` - Main application source code
-  - `draconicApp.swift` - App entry point with WindowGroup scene
-  - `ContentView.swift` - Main UI view (SwiftUI)
-  - `draconic.entitlements` - App sandbox entitlements (read-only file access)
-  - `Assets.xcassets/` - App assets and resources
-- `draconicTests/` - Unit tests using Swift Testing framework
-- `draconicUITests/` - UI tests for the application
-- `draconic.xcodeproj/` - Xcode project configuration
+The app uses a modular architecture with clear separation of concerns:
 
-## Key Configuration
+### Key Components
+- **`AudioCaptureManager`** - Handles microphone input and audio processing using `AVAudioEngine`
+- **`WhisperManager`** - Manages WhisperKit integration for speech-to-text transcription
+- **`GlobalHotkeyManager`** - Registers global hotkey (Cmd+Shift+J) using Carbon APIs
+- **`FloatingWindow`** - Creates semi-transparent overlay window for dictation UI
+- **`AppDelegate`** - Coordinates app lifecycle and hotkey handling
 
-- **Target Platform**: macOS 15.4+
-- **Bundle ID**: `com.ethanmick.draconic` 
-- **Swift Version**: 5.0
-- **Testing Framework**: Swift Testing (modern `@Test` syntax, not XCTest)
-- **UI Framework**: SwiftUI with Preview support
-- **Sandboxing**: App sandbox enabled with read-only file access
+### Data Flow
+1. User presses global hotkey → Shows floating window
+2. Audio capture begins → Real-time transcription starts
+3. User speaks → WhisperKit processes audio chunks 
+4. Text appears in overlay → User can edit if needed
+5. Cmd+Enter sends text to active app → Window closes
+
+## Dependencies
+
+- **WhisperKit** - On-device speech recognition (large-v3 model)
+- **Swift Collections** - Enhanced data structures
+- **Swift Transformers** - ML model support
+- **Swift Argument Parser** - CLI argument handling
+
+## Permissions & Entitlements
+
+The app requires these sandbox permissions:
+- `com.apple.security.device.audio-input` - Microphone access
+- `com.apple.security.network.client` - Download WhisperKit models
+- `com.apple.security.automation.apple-events` - Text injection via events
 
 ## Development Commands
 
-Since this is an Xcode project, development should primarily be done through Xcode IDE. Command line builds require full Xcode installation (not just Command Line Tools).
-
 ### Building and Running
-- Open `draconic.xcodeproj` in Xcode
-- Use Cmd+R to build and run
-- Use Cmd+U to run tests
-- **IMPORTANT**: If code changes need testing, ask the user to build and run the app in Xcode (command line builds require full Xcode installation)
+```bash
+# Open project in Xcode (required for development)
+open draconic.xcodeproj
+
+# Build and run: Cmd+R in Xcode
+# Run tests: Cmd+U in Xcode
+```
+
+**IMPORTANT**: Command line builds require full Xcode installation. For code testing, ask user to build/run in Xcode.
 
 ### Testing
-- Unit tests in `draconicTests/` use Swift Testing framework
-- Use `@Test` attribute instead of XCTest's `func test*` pattern
+- Unit tests use Swift Testing framework (`@Test` syntax)
 - UI tests available in `draconicUITests/`
-
-## Architecture Notes
-
-- Standard SwiftUI app structure with `@main` App protocol
-- Uses modern Swift concurrency (`async throws` in tests)
-- Follows SwiftUI declarative patterns
-- Minimal initial setup - currently displays "Hello, world!" with globe icon
+- Audio features require microphone permissions to test fully
 
 ## Platform-Specific Guidelines
 
 **CRITICAL: This is a macOS-only application. DO NOT use iOS-specific APIs.**
 
+### ✅ Correct macOS Patterns:
+- `AVAudioEngine` for audio capture (no session management needed)
+- `AVCaptureDevice.requestAccess(for: .audio)` for microphone permissions
+- `NSPanel` with `.floating` level for overlay windows
+- Carbon APIs for global hotkeys
+- `CGEvent` for text injection
+- `NSVisualEffectView` for window transparency
+
 ### ❌ Avoid iOS-Only APIs:
-- `AVAudioSession` (iOS audio session management - not needed on macOS)
+- `AVAudioSession` (not needed on macOS)
 - `UIKit` imports or components
 - iOS-specific permission patterns
 - `UIApplication` or `UIScene` APIs
 
-### ✅ Use macOS APIs:
-- `AVAudioEngine` directly (no session management needed)
-- `AVCaptureDevice.requestAccess(for: .audio)` for microphone permissions
-- `NSWindow`, `NSApplication` for native macOS features
-- `AppKit` when SwiftUI is insufficient
+## Key Implementation Details
 
-### Audio Capture Notes:
-- Use `audioEngine.inputNode.inputFormat(forBus: 0)` for microphone input
-- No `AVAudioSession` configuration required on macOS
-- Direct access to `AVAudioEngine` without iOS constraints
+### Audio Processing
+- Captures audio at 16kHz, 16-bit, mono format
+- Processes 2-second chunks for real-time transcription
+- Maintains 0.5-second overlap for context continuity
+- Creates proper WAV headers for WhisperKit compatibility
+
+### Window Management
+- Uses `NSPanel` with `.nonactivatingPanel` to avoid stealing focus
+- Semi-transparent background with `NSVisualEffectView.hudWindow`
+- Captures previous app focus and restores on close
+- Handles Escape (cancel) and Cmd+Enter (send) keyboard shortcuts
+
+### Text Insertion
+- Temporarily replaces clipboard contents
+- Simulates Cmd+V keypress using `CGEvent`
+- Restores original clipboard after insertion
+- Small delays ensure proper sequencing
+
+## File Organization
+
+```
+draconic/
+├── draconicApp.swift          # App entry point with AppDelegate
+├── ContentView.swift          # Main app window (permission UI)
+├── AudioCaptureManager.swift  # AVAudioEngine wrapper
+├── WhisperManager.swift       # WhisperKit integration
+├── GlobalHotkeyManager.swift  # Carbon hotkey registration  
+├── FloatingWindow.swift       # Overlay window + UI
+└── draconic.entitlements      # Sandbox permissions
+```

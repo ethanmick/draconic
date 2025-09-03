@@ -11,11 +11,13 @@ import AppKit
 class FloatingWindowController: NSWindowController, ObservableObject {
     @Published var audioManager: AudioCaptureManager?
     @Published var whisperManager: WhisperManager?
+    weak var appDelegate: AppDelegate?
     
-    convenience init() {
+    convenience init(appDelegate: AppDelegate) {
         let panel = FloatingPanel()
         self.init(window: panel)
         panel.floatingController = self
+        self.appDelegate = appDelegate
         setupManagers()
         updateContentView()
     }
@@ -122,7 +124,7 @@ class FloatingPanel: NSPanel {
             let transcription = floatingController?.getCurrentTranscription() ?? ""
             if !transcription.isEmpty {
                 floatingController?.stopListening()
-                insertTextIntoActiveApp(transcription)
+                floatingController?.appDelegate?.injectText(transcription)
             }
             self.close()
             return
@@ -131,40 +133,6 @@ class FloatingPanel: NSPanel {
         super.keyDown(with: event)
     }
     
-    private func insertTextIntoActiveApp(_ text: String) {
-        // Copy text to clipboard and paste it
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-            // Save current clipboard contents
-            let pasteboard = NSPasteboard.general
-            let originalContents = pasteboard.string(forType: .string)
-            
-            // Set our text to clipboard
-            pasteboard.clearContents()
-            pasteboard.setString(text, forType: .string)
-            
-            // Simulate Cmd+V to paste
-            let source = CGEventSource(stateID: .hidSystemState)
-            
-            // Create Cmd+V key events
-            if let cmdVDown = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: true), // V key
-               let cmdVUp = CGEvent(keyboardEventSource: source, virtualKey: 9, keyDown: false) {
-                
-                cmdVDown.flags = .maskCommand
-                cmdVUp.flags = .maskCommand
-                
-                cmdVDown.post(tap: .cghidEventTap)
-                cmdVUp.post(tap: .cghidEventTap)
-            }
-            
-            // Restore original clipboard contents after a short delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                if let original = originalContents {
-                    pasteboard.clearContents()
-                    pasteboard.setString(original, forType: .string)
-                }
-            }
-        }
-    }
 }
 
 struct FloatingWindowContent: View {

@@ -11,7 +11,7 @@ import AppKit
 class AppDelegate: NSObject, NSApplicationDelegate {
     var hotkeyManager = GlobalHotkeyManager()
     var floatingWindowController: FloatingWindowController?
-    var previousApp: NSRunningApplication?
+    var frontContext: FrontContext?
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupHotkey()
@@ -25,18 +25,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func showFloatingWindow() {
-        // Capture the currently active app before showing our window
-        previousApp = NSWorkspace.shared.frontmostApplication
+        // Check accessibility permission first
+        guard AccessibilityGate.ensurePermission() else {
+            showAccessibilityAlert()
+            return
+        }
+        
+        // Capture the front context BEFORE we activate our UI
+        frontContext = FrontContext.capture()
         
         if floatingWindowController == nil {
-            floatingWindowController = FloatingWindowController()
+            floatingWindowController = FloatingWindowController(appDelegate: self)
             
             NotificationCenter.default.addObserver(
                 forName: NSWindow.willCloseNotification,
                 object: floatingWindowController?.window,
                 queue: .main
             ) { _ in
-                self.restorePreviousAppFocus()
                 self.floatingWindowController = nil
             }
         }
@@ -45,12 +50,27 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.activate(ignoringOtherApps: true)
     }
     
-    private func restorePreviousAppFocus() {
-        // Return focus to the previously active app
-        if let previousApp = previousApp {
-            previousApp.activate()
+    func injectText(_ text: String) {
+        guard let context = frontContext else { return }
+        TextInjector.inject(text: text, into: context)
+        frontContext = nil
+    }
+    
+    private func showAccessibilityAlert() {
+        let alert = NSAlert()
+        alert.messageText = "Accessibility Permission Required"
+        alert.informativeText = "Draconic needs accessibility permission to inject text into other applications.\n\nTo grant permission:\n1. Click 'Open Settings'\n2. Click the '+' button to add Draconic\n3. Navigate to your app and select it\n4. Enable the checkbox next to Draconic"
+        alert.addButton(withTitle: "Open Settings")
+        alert.addButton(withTitle: "Cancel")
+        alert.alertStyle = .informational
+        
+        let response = alert.runModal()
+        if response == .alertFirstButtonReturn {
+            // Open System Preferences to Privacy & Security > Accessibility
+            if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                NSWorkspace.shared.open(url)
+            }
         }
-        self.previousApp = nil
     }
 }
 

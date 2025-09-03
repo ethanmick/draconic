@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		AACFBDC92E68884B00C17233 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = AACFBDC82E68884B00C17233 /* WhisperKit */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		AACFBDAB2E6883F600C17233 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -52,6 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AACFBDC92E68884B00C17233 /* WhisperKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -112,6 +117,7 @@
 			);
 			name = draconic;
 			packageProductDependencies = (
+				AACFBDC82E68884B00C17233 /* WhisperKit */,
 			);
 			productName = draconic;
 			productReference = AACFBD9C2E6883F500C17233 /* draconic.app */;
@@ -195,6 +201,9 @@
 			);
 			mainGroup = AACFBD932E6883F500C17233;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				AACFBDC72E68884B00C17233 /* XCRemoteSwiftPackageReference "WhisperKit" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = AACFBD9D2E6883F500C17233 /* Products */;
 			projectDirPath = "";
@@ -541,6 +550,25 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		AACFBDC72E68884B00C17233 /* XCRemoteSwiftPackageReference "WhisperKit" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/argmaxinc/WhisperKit";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AACFBDC82E68884B00C17233 /* WhisperKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AACFBDC72E68884B00C17233 /* XCRemoteSwiftPackageReference "WhisperKit" */;
+			productName = WhisperKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = AACFBD942E6883F500C17233 /* Project object */;
 }

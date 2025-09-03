@@ -28,10 +28,12 @@ class WhisperManager {
         isLoading = true
         
         do {
-            whisperKit = try await WhisperKit()
-            print("WhisperKit initialized successfully")
+            print("🚀 Initializing WhisperKit with auto-download...")
+            let config = WhisperKitConfig(model: "large-v3")
+            whisperKit = try await WhisperKit(config)
+            print("✅ WhisperKit initialized successfully")
         } catch {
-            print("Failed to initialize WhisperKit: \(error)")
+            print("❌ Failed to initialize WhisperKit: \(error)")
         }
         
         isLoading = false

@@ -8,6 +8,9 @@
 
 /* Begin PBXBuildFile section */
 		AACFBDC92E68884B00C17233 /* WhisperKit in Frameworks */ = {isa = PBXBuildFile; productRef = AACFBDC82E68884B00C17233 /* WhisperKit */; };
+		AACFBDD32E6895FA00C17233 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = AACFBDD22E6895FA00C17233 /* README.md */; };
+		AACFBDD42E6895FA00C17233 /* CLAUDE.md in Resources */ = {isa = PBXBuildFile; fileRef = AACFBDD02E6895FA00C17233 /* CLAUDE.md */; };
+		AACFBDD52E6895FA00C17233 /* IMPLEMENTATION.md in Resources */ = {isa = PBXBuildFile; fileRef = AACFBDD12E6895FA00C17233 /* IMPLEMENTATION.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -31,6 +34,9 @@
 		AACFBD9C2E6883F500C17233 /* draconic.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = draconic.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		AACFBDAA2E6883F600C17233 /* draconicTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = draconicTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AACFBDB42E6883F600C17233 /* draconicUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = draconicUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AACFBDD02E6895FA00C17233 /* CLAUDE.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = CLAUDE.md; sourceTree = "<group>"; };
+		AACFBDD12E6895FA00C17233 /* IMPLEMENTATION.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = IMPLEMENTATION.md; sourceTree = "<group>"; };
+		AACFBDD22E6895FA00C17233 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -93,6 +99,9 @@
 		AACFBD932E6883F500C17233 = {
 			isa = PBXGroup;
 			children = (
+				AACFBDD02E6895FA00C17233 /* CLAUDE.md */,
+				AACFBDD12E6895FA00C17233 /* IMPLEMENTATION.md */,
+				AACFBDD22E6895FA00C17233 /* README.md */,
 				AACFBD9E2E6883F500C17233 /* draconic */,
 				AACFBDAD2E6883F600C17233 /* draconicTests */,
 				AACFBDB72E6883F600C17233 /* draconicUITests */,
@@ -234,6 +243,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AACFBDD32E6895FA00C17233 /* README.md in Resources */,
+				AACFBDD42E6895FA00C17233 /* CLAUDE.md in Resources */,
+				AACFBDD52E6895FA00C17233 /* IMPLEMENTATION.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

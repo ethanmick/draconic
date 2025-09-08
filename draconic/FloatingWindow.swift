@@ -50,12 +50,28 @@ class FloatingWindowController: NSWindowController, ObservableObject {
         }
     }
     
+    func pauseListening() {
+        audioManager?.pauseRecording()
+    }
+    
+    func resumeListening() {
+        audioManager?.resumeRecording()
+    }
+    
     func stopListening() {
         audioManager?.stopRecording()
     }
     
+    func isPaused() -> Bool {
+        return audioManager?.isPaused ?? false
+    }
+    
     func getCurrentTranscription() -> String {
         return whisperManager?.realtimeText.isEmpty == false ? whisperManager?.realtimeText ?? "" : whisperManager?.transcribedText ?? ""
+    }
+    
+    func isTranscribing() -> Bool {
+        return whisperManager?.isRealtimeTranscribing == true || whisperManager?.isTranscribing == true
     }
     
     func clearTranscription() {
@@ -119,6 +135,16 @@ class FloatingPanel: NSPanel {
             return
         }
         
+        // Spacebar to pause/resume transcription
+        if event.keyCode == 49 { // Spacebar
+            if floatingController?.isPaused() == true {
+                floatingController?.resumeListening()
+            } else {
+                floatingController?.pauseListening()
+            }
+            return
+        }
+        
         // Cmd+Enter to finish and send text
         if event.keyCode == 36 && event.modifierFlags.contains(.command) { // Enter key with Cmd
             let transcription = floatingController?.getCurrentTranscription() ?? ""
@@ -139,17 +165,29 @@ struct FloatingWindowContent: View {
     @ObservedObject var windowController: FloatingWindowController
     @State private var transcriptionText = ""
     @State private var isListening = false
+    @State private var isPaused = false
+    @State private var isTranscribing = false
     @State private var timer: Timer?
     
     var body: some View {
         VStack(spacing: 16) {
             HStack {
-                Image(systemName: isListening ? "mic.fill" : "mic.slash.fill")
-                    .foregroundColor(isListening ? .blue : .red)
+                Image(systemName: isPaused ? "pause.fill" : (isListening ? "mic.fill" : "mic.slash.fill"))
+                    .foregroundColor(isPaused ? .orange : (isListening ? .blue : .red))
                     .font(.title2)
-                Text(isListening ? "Listening..." : "Starting...")
+                Text(isPaused ? "Paused" : (isListening ? "Listening..." : "Starting..."))
                     .font(.headline)
                     .foregroundColor(.primary)
+                
+                // Show transcription indicator when still processing
+                if isTranscribing && isPaused {
+                    Image(systemName: "brain.filled.head.profile")
+                        .foregroundColor(.yellow)
+                        .font(.title3)
+                    Text("Processing...")
+                        .font(.caption)
+                        .foregroundColor(.yellow)
+                }
             }
             
             ScrollView {
@@ -173,6 +211,20 @@ struct FloatingWindowContent: View {
                         .cornerRadius(4)
                         .font(.caption.monospaced())
                     Text("to send")
+                        .foregroundColor(.secondary)
+                }
+                .font(.caption)
+                
+                HStack {
+                    Text("Press")
+                        .foregroundColor(.secondary)
+                    Text("SPACE")
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.quaternary)
+                        .cornerRadius(4)
+                        .font(.caption.monospaced())
+                    Text(isPaused ? "to resume" : "to pause")
                         .foregroundColor(.secondary)
                 }
                 .font(.caption)
@@ -210,11 +262,21 @@ struct FloatingWindowContent: View {
             }
         }
         
-        // Start updating transcription text
+        // Start updating transcription text and pause state
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
             let newText = windowController.getCurrentTranscription()
             if newText != transcriptionText {
                 transcriptionText = newText
+            }
+            
+            let pausedState = windowController.isPaused()
+            if pausedState != isPaused {
+                isPaused = pausedState
+            }
+            
+            let transcribingState = windowController.isTranscribing()
+            if transcribingState != isTranscribing {
+                isTranscribing = transcribingState
             }
         }
     }

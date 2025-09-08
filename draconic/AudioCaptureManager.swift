@@ -19,6 +19,7 @@ class AudioCaptureManager: NSObject {
     private let streamingInterval: TimeInterval = 2.0 // Stream every 2 seconds
     
     var isRecording = false
+    var isPaused = false
     var onAudioCaptured: ((Data) -> Void)?
     var onStreamingAudioCaptured: ((Data) -> Void)?
     
@@ -76,19 +77,22 @@ class AudioCaptureManager: NSObject {
                 let data = Data(bytes: channelData, count: Int(convertedBuffer.frameLength * 2))
                 
                 DispatchQueue.main.async {
-                    self.audioBuffer.append(data)
-                    self.streamingBuffer.append(data)
-                    
-                    // Check if it's time to stream audio for realtime transcription
-                    let now = Date()
-                    if now.timeIntervalSince(self.lastStreamTime) >= self.streamingInterval && !self.streamingBuffer.isEmpty {
-                        let streamData = self.createWAVData(from: self.streamingBuffer)
-                        self.onStreamingAudioCaptured?(streamData)
-                        self.lastStreamTime = now
-                        // Keep last 0.5 seconds for context overlap
-                        let overlapSamples = Int(16000 * 0.5 * 2) // 0.5 seconds of 16kHz 16-bit mono
-                        if self.streamingBuffer.count > overlapSamples {
-                            self.streamingBuffer = Data(self.streamingBuffer.suffix(overlapSamples))
+                    // Only process audio if not paused
+                    if !self.isPaused {
+                        self.audioBuffer.append(data)
+                        self.streamingBuffer.append(data)
+                        
+                        // Check if it's time to stream audio for realtime transcription
+                        let now = Date()
+                        if now.timeIntervalSince(self.lastStreamTime) >= self.streamingInterval && !self.streamingBuffer.isEmpty {
+                            let streamData = self.createWAVData(from: self.streamingBuffer)
+                            self.onStreamingAudioCaptured?(streamData)
+                            self.lastStreamTime = now
+                            // Keep last 0.5 seconds for context overlap
+                            let overlapSamples = Int(16000 * 0.5 * 2) // 0.5 seconds of 16kHz 16-bit mono
+                            if self.streamingBuffer.count > overlapSamples {
+                                self.streamingBuffer = Data(self.streamingBuffer.suffix(overlapSamples))
+                            }
                         }
                     }
                 }
@@ -104,12 +108,25 @@ class AudioCaptureManager: NSObject {
         }
     }
     
+    func pauseRecording() {
+        guard isRecording && !isPaused else { return }
+        isPaused = true
+        print("Paused recording")
+    }
+    
+    func resumeRecording() {
+        guard isRecording && isPaused else { return }
+        isPaused = false
+        print("Resumed recording")
+    }
+    
     func stopRecording() {
         guard isRecording else { return }
         
         audioEngine.stop()
         inputNode?.removeTap(onBus: 0)
         isRecording = false
+        isPaused = false
         
         print("Stopped recording, captured \(audioBuffer.count) bytes")
         

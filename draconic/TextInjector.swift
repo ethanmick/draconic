@@ -10,7 +10,16 @@ import ApplicationServices
 import Carbon.HIToolbox
 
 enum TextInjector {
-    static func inject(text: String, into context: FrontContext) {
+    static func inject(text: String, into context: FrontContext) -> Bool {
+        // Check if we have accessibility permissions
+        guard AccessibilityGate.checkPermission() else {
+            // Fallback: just copy to clipboard
+            let pb = NSPasteboard.general
+            pb.clearContents()
+            pb.setString(text, forType: .string)
+            return false
+        }
+        
         // Bring original app forward again
         context.app.activate(options: [.activateIgnoringOtherApps])
         
@@ -20,6 +29,8 @@ enum TextInjector {
             if pasteViaCommandV(text, targetApp: context.app) { return }
             typeCharacters(text)
         }
+        
+        return true
     }
     
     // 1) Try setting value via AX (replaces entire field if allowed)
@@ -38,7 +49,6 @@ enum TextInjector {
         pb.setString(text, forType: .string)
         
         // Send ⌘V
-        guard AccessibilityGate.checkPermission() else { return false }
         let src = CGEventSource(stateID: .combinedSessionState)
         let vDown = CGEvent(keyboardEventSource: src, virtualKey: CGKeyCode(kVK_ANSI_V), keyDown: true)
         vDown?.flags = .maskCommand
@@ -51,7 +61,6 @@ enum TextInjector {
     
     // 3) Last resort: synthesize keystrokes (ASCII-safe)
     private static func typeCharacters(_ text: String) {
-        guard AccessibilityGate.checkPermission() else { return }
         let src = CGEventSource(stateID: .combinedSessionState)
         for ch in text.utf8 {
             guard let (down, up) = keyEventsForASCII(UInt8(ch), source: src) else { continue }

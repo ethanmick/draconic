@@ -12,6 +12,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     var hotkeyManager = GlobalHotkeyManager()
     var floatingWindowController: FloatingWindowController?
     var frontContext: FrontContext?
+    var hasShownAccessibilityWarning = false
     
     func applicationDidFinishLaunching(_ notification: Notification) {
         setupHotkey()
@@ -25,12 +26,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func showFloatingWindow() {
-        // Check accessibility permission first
-        guard AccessibilityGate.ensurePermission() else {
-            showAccessibilityAlert()
-            return
-        }
-        
         // Capture the front context BEFORE we activate our UI
         frontContext = FrontContext.capture()
         
@@ -52,16 +47,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     
     func injectText(_ text: String) {
         guard let context = frontContext else { return }
-        TextInjector.inject(text: text, into: context)
+        let success = TextInjector.inject(text: text, into: context)
+        
+        if !success && !hasShownAccessibilityWarning {
+            showAccessibilityAlert()
+            hasShownAccessibilityWarning = true
+        }
+        
         frontContext = nil
     }
     
     private func showAccessibilityAlert() {
         let alert = NSAlert()
-        alert.messageText = "Accessibility Permission Required"
-        alert.informativeText = "Draconic needs accessibility permission to inject text into other applications.\n\nTo grant permission:\n1. Click 'Open Settings'\n2. Click the '+' button to add Draconic\n3. Navigate to your app and select it\n4. Enable the checkbox next to Draconic"
+        alert.messageText = "Text Copied to Clipboard"
+        alert.informativeText = "Draconic couldn't automatically paste the text because accessibility permission is not granted.\n\nThe transcribed text has been copied to your clipboard. You can paste it manually with Cmd+V.\n\nTo enable automatic pasting:\n1. Click 'Open Settings'\n2. Click the '+' button to add Draconic\n3. Navigate to your app and select it\n4. Enable the checkbox next to Draconic"
         alert.addButton(withTitle: "Open Settings")
-        alert.addButton(withTitle: "Cancel")
+        alert.addButton(withTitle: "OK")
         alert.alertStyle = .informational
         
         let response = alert.runModal()

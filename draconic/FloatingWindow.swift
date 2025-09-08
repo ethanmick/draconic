@@ -145,8 +145,8 @@ class FloatingPanel: NSPanel {
             return
         }
         
-        // Cmd+Enter to finish and send text
-        if event.keyCode == 36 && event.modifierFlags.contains(.command) { // Enter key with Cmd
+        // Enter to finish and send text
+        if event.keyCode == 36 { // Enter key
             let transcription = floatingController?.getCurrentTranscription() ?? ""
             if !transcription.isEmpty {
                 floatingController?.stopListening()
@@ -204,7 +204,7 @@ struct FloatingWindowContent: View {
                 HStack {
                     Text("Press")
                         .foregroundColor(.secondary)
-                    Text("⌘↩")
+                    Text("↩")
                         .padding(.horizontal, 8)
                         .padding(.vertical, 4)
                         .background(.quaternary)

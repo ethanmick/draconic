@@ -8,6 +8,17 @@
 import SwiftUI
 import AppKit
 
+private struct AppDelegateKey: EnvironmentKey {
+    static let defaultValue: AppDelegate? = nil
+}
+
+extension EnvironmentValues {
+    var appDelegate: AppDelegate? {
+        get { self[AppDelegateKey.self] }
+        set { self[AppDelegateKey.self] = newValue }
+    }
+}
+
 class AppDelegate: NSObject, NSApplicationDelegate {
     var hotkeyManager = GlobalHotkeyManager()
     var floatingWindowController: FloatingWindowController?
@@ -25,7 +36,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         hotkeyManager.registerHotkey()
     }
     
-    private func showFloatingWindow() {
+    func showFloatingWindow() {
         // Capture the front context BEFORE we activate our UI
         frontContext = FrontContext.capture()
         
@@ -84,6 +95,7 @@ struct draconicApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(\.appDelegate, appDelegate)
         }
     }
 }

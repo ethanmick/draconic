@@ -62,16 +62,32 @@ class FloatingWindowController: NSWindowController, ObservableObject {
         audioManager?.stopRecording()
     }
     
+    func performFinalTranscription() async {
+        guard let audioManager = audioManager,
+              let audioData = audioManager.getFullAudioData() else {
+            return
+        }
+        
+        await whisperManager?.transcribeFinal(audioData: audioData)
+    }
+    
     func isPaused() -> Bool {
         return audioManager?.isPaused ?? false
     }
     
     func getCurrentTranscription() -> String {
-        return whisperManager?.realtimeText.isEmpty == false ? whisperManager?.realtimeText ?? "" : whisperManager?.transcribedText ?? ""
+        // Prioritize final text, then realtime, then fallback to regular transcribed text
+        if let finalText = whisperManager?.finalText, !finalText.isEmpty {
+            return finalText
+        } else if let realtimeText = whisperManager?.realtimeText, !realtimeText.isEmpty {
+            return realtimeText
+        } else {
+            return whisperManager?.transcribedText ?? ""
+        }
     }
     
     func isTranscribing() -> Bool {
-        return whisperManager?.isRealtimeTranscribing == true || whisperManager?.isTranscribing == true
+        return whisperManager?.isRealtimeTranscribing == true || whisperManager?.isTranscribing == true || whisperManager?.isFinalTranscribing == true
     }
     
     func clearTranscription() {
@@ -141,18 +157,29 @@ class FloatingPanel: NSPanel {
                 floatingController?.resumeListening()
             } else {
                 floatingController?.pauseListening()
+                // Trigger final transcription when pausing
+                Task {
+                    await floatingController?.performFinalTranscription()
+                }
             }
             return
         }
         
         // Enter to finish and send text
         if event.keyCode == 36 { // Enter key
-            let transcription = floatingController?.getCurrentTranscription() ?? ""
-            if !transcription.isEmpty {
-                floatingController?.stopListening()
-                floatingController?.appDelegate?.injectText(transcription)
+            floatingController?.stopListening()
+            
+            // Perform final transcription before sending
+            Task {
+                await floatingController?.performFinalTranscription()
+                await MainActor.run {
+                    let transcription = floatingController?.getCurrentTranscription() ?? ""
+                    if !transcription.isEmpty {
+                        floatingController?.appDelegate?.injectText(transcription)
+                    }
+                    self.close()
+                }
             }
-            self.close()
             return
         }
         
@@ -167,6 +194,7 @@ struct FloatingWindowContent: View {
     @State private var isListening = false
     @State private var isPaused = false
     @State private var isTranscribing = false
+    @State private var showFinalTranscriptionIndicator = false
     @State private var timer: Timer?
     
     var body: some View {
@@ -180,23 +208,38 @@ struct FloatingWindowContent: View {
                     .foregroundColor(.primary)
                 
                 // Show transcription indicator when still processing
-                if isTranscribing && isPaused {
+                if isTranscribing {
                     Image(systemName: "brain.filled.head.profile")
                         .foregroundColor(.yellow)
                         .font(.title3)
-                    Text("Processing...")
+                    Text(isPaused ? "Final processing..." : "Processing...")
                         .font(.caption)
                         .foregroundColor(.yellow)
                 }
             }
             
             ScrollView {
-                Text(transcriptionText.isEmpty ? "Speak to begin transcription..." : transcriptionText)
-                    .font(.body)
-                    .foregroundColor(transcriptionText.isEmpty ? .secondary : .primary)
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 8)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(transcriptionText.isEmpty ? "Speak to begin transcription..." : transcriptionText)
+                        .font(.body)
+                        .foregroundColor(transcriptionText.isEmpty ? .secondary : .primary)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 8)
+                    
+                    if showFinalTranscriptionIndicator {
+                        HStack {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundColor(.green)
+                                .font(.caption)
+                            Text("Enhanced transcription")
+                                .font(.caption)
+                                .foregroundColor(.green)
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.top, 2)
+                    }
+                }
             }
             .frame(minHeight: 80, maxHeight: 120)
             
@@ -265,7 +308,21 @@ struct FloatingWindowContent: View {
         // Start updating transcription text and pause state
         timer = Timer.scheduledTimer(withTimeInterval: 0.1, repeats: true) { _ in
             let newText = windowController.getCurrentTranscription()
+            
+            // Check if final transcription completed (was transcribing, now has final text)
+            let wasFinalTranscribing = windowController.whisperManager?.isFinalTranscribing == true
+            let hasFinalText = windowController.whisperManager?.finalText.isEmpty == false
+            let previouslyTranscribing = isTranscribing
+            
             if newText != transcriptionText {
+                // If we have new text and it's from final transcription, show indicator
+                if hasFinalText && !wasFinalTranscribing && previouslyTranscribing {
+                    showFinalTranscriptionIndicator = true
+                    // Hide indicator after 3 seconds
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+                        showFinalTranscriptionIndicator = false
+                    }
+                }
                 transcriptionText = newText
             }
             

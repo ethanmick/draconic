@@ -138,6 +138,11 @@ class AudioCaptureManager: NSObject {
         streamingBuffer = Data()
     }
     
+    func getFullAudioData() -> Data? {
+        guard !audioBuffer.isEmpty else { return nil }
+        return createWAVData(from: audioBuffer)
+    }
+    
     private func createWAVData(from pcmData: Data) -> Data {
         var wavData = Data()
         

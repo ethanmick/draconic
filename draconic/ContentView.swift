@@ -11,6 +11,7 @@ struct ContentView: View {
     @State private var whisperManager = WhisperManager()
     @State private var audioManager = AudioCaptureManager()
     @State private var hasPermission = false
+    @Environment(\.appDelegate) private var appDelegate
     
     var body: some View {
         VStack(spacing: 20) {
@@ -79,6 +80,15 @@ struct ContentView: View {
                         }
                         .buttonStyle(.bordered)
                     }
+                    
+                    Divider()
+                        .padding(.vertical)
+                    
+                    Button("Test Floating Window") {
+                        appDelegate?.showFloatingWindow()
+                    }
+                    .buttonStyle(.bordered)
+                    .foregroundColor(.purple)
                 }
             }
         }

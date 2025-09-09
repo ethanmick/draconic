@@ -16,8 +16,10 @@ class WhisperManager {
     
     var transcribedText: String = ""
     var realtimeText: String = ""
+    var finalText: String = ""
     var isTranscribing: Bool = false
     var isRealtimeTranscribing: Bool = false
+    var isFinalTranscribing: Bool = false
     
     init() {
         Task {
@@ -112,8 +114,39 @@ class WhisperManager {
         isRealtimeTranscribing = false
     }
     
+    func transcribeFinal(audioData: Data) async {
+        guard let whisperKit = whisperKit else {
+            print("WhisperKit not initialized")
+            return
+        }
+        
+        isFinalTranscribing = true
+        
+        do {
+            let tempURL = FileManager.default.temporaryDirectory.appendingPathComponent("temp_final_audio.wav")
+            try audioData.write(to: tempURL)
+            
+            let results = try await whisperKit.transcribe(audioPath: tempURL.path)
+            
+            await MainActor.run {
+                if let firstResult = results.first, !firstResult.text.isEmpty {
+                    self.finalText = firstResult.text.trimmingCharacters(in: .whitespacesAndNewlines)
+                    print("Final transcription completed: \(self.finalText)")
+                }
+            }
+            
+            try FileManager.default.removeItem(at: tempURL)
+            
+        } catch {
+            print("Final transcription failed: \(error)")
+        }
+        
+        isFinalTranscribing = false
+    }
+    
     func clearText() {
         transcribedText = ""
         realtimeText = ""
+        finalText = ""
     }
 }
